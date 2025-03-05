@@ -27,16 +27,21 @@ namespace Restaurant.Controllers
         [HttpGet]
         public async Task<IActionResult> AddEdit(int id)
         {
+            ViewBag.Ingredients = await ingredients.GetAllAsync();
+            ViewBag.Categories = await categories.GetAllAsync();
             if (id == 0)
             {
                 ViewBag.Operation = "Add";
-                ViewBag.Ingredients = await ingredients.GetAllAsync();
-                ViewBag.Categories = await categories.GetAllAsync();
                 return View(new Product());
             } else
             {
+                Product product = await products.GetByIdAsync(id, new QueryOptions<Product>
+                {
+                    Includes = "ProductIngredients.Ingredient, Category",
+                    Where = p => p.ProductId == id
+                });
                 ViewBag.Operation = "Edit";
-                return View();
+                return View(product);
             }
         }
 
@@ -44,6 +49,9 @@ namespace Restaurant.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddEdit(Product product, int[] ingredientIds, int catId)
         {
+            ViewBag.Ingredients = await ingredients.GetAllAsync();
+            ViewBag.Categories = await categories.GetAllAsync();
+
             if (ModelState.IsValid)
             {
                 if(product.ImageFile != null)
@@ -60,8 +68,6 @@ namespace Restaurant.Controllers
 
                 if(product.ProductId == 0)
                 {
-                    ViewBag.Ingredients = await ingredients.GetAllAsync();
-                    ViewBag.Categories = await categories.GetAllAsync();
                     product.CategoryId = catId;
 
                     foreach(int id in ingredientIds)
@@ -74,13 +80,33 @@ namespace Restaurant.Controllers
                 }
                 else
                 {
-                    return RedirectToAction("Index", "Product");
+                    var existingProduct = await products.GetByIdAsync(product.ProductId, new QueryOptions<Product>
+                    {
+                        Includes = "ProductIngredients.Ingredient"
+                    });
+                    if (existingProduct == null)
+                    {
+                        ModelState.AddModelError("", "Product not found");
+                        return View(product);
+                    }
+
+                    existingProduct.Name = product.Name;
+                    existingProduct.Description = product.Description;
+                    existingProduct.Price = product.Price;
+                    existingProduct.Stock = product.Stock;
+                    existingProduct.CategoryId = catId;
+
+                    existingProduct.ProductIngredients?.Clear();
+                    foreach (int id in ingredientIds)
+                    {
+                        existingProduct.ProductIngredients?.Add(new ProductIngredient { IngredientId = id, ProductId = product.ProductId });
+                    }
+
+                    await products.UpdateAsync(existingProduct);
+                    return View(existingProduct);
                 }
             }
-            else
-            {
-                return View(product);
-            }
+            return RedirectToAction("Index", "Product");
         }
     }
 }
