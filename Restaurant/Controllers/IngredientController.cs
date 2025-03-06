@@ -7,7 +7,7 @@ namespace Restaurant.Controllers
     public class IngredientController : Controller
     {
         private Repository<Ingredient> ingredients;
-        
+
         public IngredientController(ApplicationDbContext context)
         {
             ingredients = new Repository<Ingredient>(context);
@@ -22,7 +22,7 @@ namespace Restaurant.Controllers
         {
             return View(await ingredients.GetByIdAsync(id, new QueryOptions<Ingredient>()
             {
-                Includes = "ProductIngredients.Product" 
+                Includes = "ProductIngredients.Product"
             }));
         }
 

@@ -33,7 +33,8 @@ namespace Restaurant.Controllers
             {
                 ViewBag.Operation = "Add";
                 return View(new Product());
-            } else
+            }
+            else
             {
                 Product product = await products.GetByIdAsync(id, new QueryOptions<Product>
                 {
@@ -54,7 +55,7 @@ namespace Restaurant.Controllers
 
             if (ModelState.IsValid)
             {
-                if(product.ImageFile != null)
+                if (product.ImageFile != null)
                 {
                     string uploadFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images");
                     string uniqueFilename = Guid.NewGuid().ToString() + "_" + product.ImageFile.FileName;
@@ -66,11 +67,11 @@ namespace Restaurant.Controllers
                     product.ImageUrl = uniqueFilename;
                 }
 
-                if(product.ProductId == 0)
+                if (product.ProductId == 0)
                 {
                     product.CategoryId = catId;
 
-                    foreach(int id in ingredientIds)
+                    foreach (int id in ingredientIds)
                     {
                         product.ProductIngredients?.Add(new ProductIngredient { IngredientId = id, ProductId = product.ProductId });
                     }
@@ -107,6 +108,22 @@ namespace Restaurant.Controllers
                 }
             }
             return RedirectToAction("Index", "Product");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                await products.DeleteAsync(id);
+                return RedirectToAction("Index");
+            }
+            catch
+            {
+                ModelState.AddModelError("", "Product not found.");
+                return RedirectToAction("Index");
+            }
         }
     }
 }
